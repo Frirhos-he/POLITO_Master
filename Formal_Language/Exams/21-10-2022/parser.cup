@@ -1,0 +1,138 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+ 
+/*WATCH OUT: THE HASHTABLE CONTENT DEPENDS ON THE EXERCISE!*/
+init with {:
+    table = new HashMap<String, Boolean>();
+:};
+ 
+parser code 	{:
+ 
+    public HashMap<String, Boolean> table;
+ 
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+ 
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+
+:};
+
+
+/*TERMINAL SYMBOLS ARE WRITTEN USING UPPERCASE LETTERS*/
+terminal SEP, TOK1, TOK2, TOK3, S, CM, COL, EQ, CMPW, WW, PW, FW;
+terminal AND, OR, NOT, UMINUS, RO, RC, T, F, SO, SC;
+//terminal DATE, HOUR, AMPM, IP, EXP, EMAIL, FILE; 
+terminal String QSTRING, VARIABLE;
+terminal Integer UINT;
+terminal Double REAL, PRICE;
+
+
+non terminal starter, header, coms, com, ass, cmp, alist;
+non terminal header1, header2, header3, nt0;
+non terminal Boolean bexpr, fzand, blist;
+
+/*Precedences and associativities
+  lower precedences*/
+// precedence left PLUS, MINUS;
+// precedence left STAR, DIV;
+// precedence left UMINUS;
+/*higher precedences*/
+
+/*Precedences and associativities
+  lower precedences*/
+precedence left OR;
+precedence left AND;
+precedence left UMINUS;
+/*higher precedences*/
+
+
+
+start with starter;
+
+starter ::= header SEP coms | header SEP;
+
+header ::= header1 | header2 | header3;
+
+header1 ::= header2 TOK2 S nt0 TOK2 S nt0 TOK2 S nt0;
+header2 ::= header3 TOK2 S nt0;
+header3 ::= nt0;
+nt0 ::= | nt0 TOK1 S | nt0 TOK3 S;
+
+
+
+coms ::= com com com com | coms com com;
+
+com ::= ass | cmp;
+
+ass ::= VARIABLE:k EQ bexpr:v S {: String res; if(v){ res="T"; }else{res="F";} System.out.println(k + " " + res); parser.table.put(k,v); :};
+
+cmp ::= CMPW bexpr alist;
+
+alist ::= WW bexpr:b SO PW RO QSTRING:s RC S SC {: Boolean a = (Boolean)parser.stack(-9); if(a==b){System.out.println(s);} :}
+          | alist WW bexpr:b SO PW RO QSTRING:s RC S SC {: Boolean a = (Boolean)parser.stack(-10); if(a==b){System.out.println(s);} :};
+
+
+
+
+// math expressions
+// expr ::= expr:a PLUS expr:b {: RESULT = a + b; :} |
+//          expr:a MINUS expr:b {: RESULT = a - b; :} |
+//          expr:a STAR expr:b  {: RESULT = a * b; :} |
+//          expr:a DIV expr:b {: RESULT = a / b; :} |
+//          RO expr:a RC {: RESULT = a; :} |
+//          MINUS expr:a {: RESULT = -a; :} %prec UMINUS |
+//          REAL:a {: RESULT = a; :};
+
+
+// boolean expressions
+bexpr ::= bexpr:a OR bexpr:b {: RESULT = a || b; :} |
+          bexpr:a AND bexpr:b  {: RESULT = a && b; :} |
+          RO bexpr:a RC {: RESULT = a; :} |
+          NOT bexpr:a {: RESULT = !a; :} %prec UMINUS |
+          T:a {: RESULT = true; :} |
+          F:a {: RESULT = false; :}|
+          VARIABLE:n {: RESULT=parser.table.get(n); :} |
+          fzand:a {: RESULT=a; :};
+
+fzand ::= FW RO blist:a RC {: RESULT=a; :};
+
+blist ::= bexpr:a {: RESULT=a; :}
+          | blist:a CM bexpr:b {: RESULT=a && b; :};
+
+//scan the hashmap to find minimum/maximum
+// String higherFoodName = "", lowerFoodName = "";
+// Double higherFoodValue = 0.0, lowerFoodValue = Double.MAX_VALUE;
+
+//     for(HashMap<String, Double> hm: parser.table.values()){
+//     for(String s : hm.keySet()){
+//         Double val = hm.get(s);
+//         if(val > higherFoodValue){
+//             higherFoodValue =val;
+//             higherFoodName = s;
+//         }
+//         if (val < lowerFoodValue){
+//             lowerFoodValue = val;
+//             lowerFoodName = s;
+//         }
+//     }
+// }  
+
+// if(flag){
+//     System.out.println("less expensive: " + lowerFoodName + " " + String.format("%.2f", lowerFoodValue) + " EURO/kg");
+//     System.out.println("More expensive: " + higherFoodName + " " + String.format("%.2f", higherFoodValue) + " EURO/kg");
+//     System.out.println("----");
+// }

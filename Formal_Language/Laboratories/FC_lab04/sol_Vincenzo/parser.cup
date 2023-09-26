@@ -1,0 +1,45 @@
+import java_cup.runtime.*;
+
+terminal DOT, COL, DASH, C, QM, RO, RC, ID, VAR;
+non terminal start_symbol, program, lines, lines_w_fact, interrogation, fact, rule, predicates, predicate, functor, arguments, argument, variable;
+
+start with start_symbol;
+
+
+start_symbol ::= program {: System.out.println("VALID!"); :};
+
+program ::= lines_w_fact interrogation lines
+        | lines interrogation lines_w_fact
+        | lines_w_fact interrogation lines_w_fact
+        | lines_w_fact interrogation
+        | interrogation lines_w_fact;
+
+lines_w_fact ::= fact
+                | fact lines
+                | fact lines_w_fact
+                | rule lines_w_fact;
+
+lines ::= rule lines
+        | rule;
+
+interrogation ::= QM DASH predicates DOT;
+
+fact ::= predicate DOT;
+
+rule ::= predicate COL DASH predicates DOT;
+
+predicates ::= predicate
+        | predicate C predicates;
+
+predicate ::= functor arguments RC
+        | ID;
+
+arguments ::= argument
+        | argument C arguments;
+
+functor ::= ID RO;
+
+argument ::= predicate
+        | variable;
+
+variable ::= VAR;

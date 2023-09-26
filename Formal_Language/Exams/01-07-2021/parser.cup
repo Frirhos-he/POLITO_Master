@@ -1,0 +1,154 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+ 
+/*WATCH OUT: THE HASHTABLE CONTENT DEPENDS ON THE EXERCISE!*/
+init with {:
+    table = new HashMap<String, HashMap<String, Double>>();
+:};
+ 
+parser code 	{:
+ 
+    public HashMap<String, HashMap<String, Double>> table;
+ 
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+ 
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+
+:};
+
+
+/*TERMINAL SYMBOLS ARE WRITTEN USING UPPERCASE LETTERS*/
+terminal SEP, TOK1, TOK2, TOK3, S, CM, COL, BO, BC, EKG, EW, KGW;
+//terminal PLUS, MINUS, STAR, DIV, UMINUS, RO, RC;
+//terminal DATE, HOUR, AMPM, IP, EXP, EMAIL, FILE; 
+terminal String QSTRING;
+terminal Integer UINT;
+terminal Double REAL, PRICE;
+
+
+non terminal starter, header;
+non terminal header1, header2, header3, nt0, ltok1, ltok2, warehouse, mat, nt1, prodl, eleml, clist, pname, nt2;
+non terminal HashMap<String,Double> mlist;
+
+/*Precedences and associativities
+  lower precedences*/
+// precedence left PLUS, MINUS;
+// precedence left STAR, DIV;
+// precedence left UMINUS;
+/*higher precedences*/
+
+
+
+start with starter;
+
+starter ::= header SEP warehouse nt1 SEP prodl;
+
+
+header ::= header1 | header2;
+
+header1 ::= ltok1 ltok2;
+
+ltok1 ::= TOK1 S TOK1 S TOK1 S TOK1 S | ltok1 TOK1 S TOK1 S;
+ltok2 ::= TOK2 S TOK2 S TOK2 S
+          | TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S
+          | TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S;
+
+header2 ::= TOK2 S nt0 TOK2 S nt0 TOK2 S nt0
+            | TOK2 S nt0 TOK2 S nt0;
+nt0 ::= | nt0 TOK1 S;
+
+
+
+warehouse ::= mat mat | warehouse mat mat;
+
+mat ::= BO mlist:m BC QSTRING:n S {:
+
+    parser.table.put(n,m);
+
+    String maxName = "", minName = "";
+    Double max = 0.0, min = Double.MAX_VALUE;
+
+        for(String s : m.keySet()){
+            Double val = m.get(s);
+            if(val > max){
+                max =val;
+                maxName = s;
+            }
+            if (val < min){
+                min = val;
+                minName = s;
+            }
+        }
+
+    System.out.println(n + ": less: " + minName + ", more: " + maxName);
+
+:};
+
+mlist ::= QSTRING:k PRICE:v EKG {: HashMap<String,Double> table = new HashMap<String, Double>(); table.put(k,v); RESULT=table;  :}
+          | mlist:m CM QSTRING:k PRICE:v EKG {: m.put(k,v); RESULT=m; :} ;
+
+nt1 ::= {:System.out.println("----");:};
+
+prodl ::= |
+          prodl PRICE EW pname COL eleml S;
+
+pname ::= QSTRING:n {: System.out.println(n); :};
+
+eleml ::= nt2 nt2 QSTRING BO clist BC
+          | eleml CM QSTRING BO clist BC;
+
+clist ::= QSTRING:name UINT:qty KGW {: HashMap<String,Double> table = parser.table.get((String)parser.stack(-4)); Double price = table.get(name); Double res = price*qty+(Double)parser.stack(-10);
+                                       System.out.println(name + " " + String.format("%.2f", res) + " euro"); :}
+         | clist CM QSTRING:name UINT:qty KGW {: HashMap<String,Double> table = parser.table.get((String)parser.stack(-6)); Double price = table.get(name); Double res = price*qty+(Double)parser.stack(-12);
+                                                 System.out.println(name + " " + String.format("%.2f", res) + " euro"); :};
+
+nt2 ::= ;
+
+// math expressions
+// expr ::= expr:a PLUS expr:b {: RESULT = a + b; :} |
+//          expr:a MINUS expr:b {: RESULT = a - b; :} |
+//          expr:a STAR expr:b  {: RESULT = a * b; :} |
+//          expr:a DIV expr:b {: RESULT = a / b; :} |
+//          RO expr:a RC {: RESULT = a; :} |
+//          MINUS expr:a {: RESULT = -a; :} %prec UMINUS |
+//          REAL:a {: RESULT = a; :};
+
+
+//scan the hashmap to find minimum/maximum
+// String higherFoodName = "", lowerFoodName = "";
+// Double higherFoodValue = 0.0, lowerFoodValue = Double.MAX_VALUE;
+
+//     for(HashMap<String, Double> hm: parser.table.values()){
+//     for(String s : hm.keySet()){
+//         Double val = hm.get(s);
+//         if(val > higherFoodValue){
+//             higherFoodValue =val;
+//             higherFoodName = s;
+//         }
+//         if (val < lowerFoodValue){
+//             lowerFoodValue = val;
+//             lowerFoodName = s;
+//         }
+//     }
+// }  
+
+// if(flag){
+//     System.out.println("less expensive: " + lowerFoodName + " " + String.format("%.2f", lowerFoodValue) + " EURO/kg");
+//     System.out.println("More expensive: " + higherFoodName + " " + String.format("%.2f", higherFoodValue) + " EURO/kg");
+//     System.out.println("----");
+// }

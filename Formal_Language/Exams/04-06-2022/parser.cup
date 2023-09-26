@@ -1,0 +1,219 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+ 
+/*WATCH OUT: THE HASHTABLE CONTENT DEPENDS ON THE EXERCISE!*/
+init with {:
+    table = new HashMap<String, Boolean>();
+:};
+ 
+parser code 	{:
+ 
+    public HashMap<String, Boolean> table;
+ 
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+ 
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+
+:};
+
+
+/*TERMINAL SYMBOLS ARE WRITTEN USING UPPERCASE LETTERS*/
+terminal SEP, TOK1, TOK2, TOK3, S, CM, COL;
+terminal EQ;
+
+
+//terminal PLUS, MINUS, STAR, DIV, UMINUS, RO, RC;
+ terminal AND, OR, NOT, UMINUS, RO, RC;
+//terminal DATE, HOUR, AMPM, IP, EXP, EMAIL, FILE; 
+terminal String QSTRING, VARIABLE;
+terminal Integer UINT;
+terminal Double REAL, PRICE;
+terminal TRUE, FALSE;
+terminal IF, FI;
+terminal DO, DONE, PRINT;
+terminal ORS, ANDS;
+
+non terminal starter, header;
+non terminal sequence_1, sequence_2;
+non terminal rep_tok2;
+non terminal rep_tok;
+non terminal rep_tok12;
+
+non terminal execution;
+non terminal command;
+non terminal ass, if;
+non terminal Boolean bexpr;
+
+non terminal list_comp;
+
+non terminal repetition_command;
+non terminal String print;
+non terminal N;
+
+
+
+/*At the beginning to test it */
+// header ::= TOK1 S;
+
+// non terminal header1, header2, header3, nt0;
+
+/*Precedences and associativities
+  lower precedences*/
+// precedence left PLUS, MINUS;
+// precedence left STAR, DIV;
+// precedence left UMINUS;
+/*higher precedences*/
+
+/*Boolean precedences*/
+ precedence left OR;
+ precedence left AND;
+ precedence left UMINUS;
+
+
+
+start with starter;
+
+starter ::= header SEP execution;
+
+header ::= sequence_1 | sequence_2;
+
+sequence_1 ::= TOK2 S TOK2 S TOK2 S rep_tok2 rep_tok rep_tok | TOK2 S TOK2 S TOK2 S rep_tok2 rep_tok rep_tok rep_tok | TOK2 S TOK2 S TOK2 S rep_tok2 rep_tok rep_tok rep_tok rep_tok rep_tok rep_tok rep_tok rep_tok rep_tok ; 
+rep_tok2 ::= rep_tok2 TOK2 S TOK2 S | ;
+rep_tok ::= TOK1 S | TOK3 S ; 
+
+sequence_2 ::= TOK3 S rep_tok12 TOK3 S rep_tok12 TOK3 S rep_tok12;
+rep_tok12 ::= rep_tok12 TOK1 S | rep_tok12 TOK2 S|;
+
+
+execution ::= repetition_command |  ;
+repetition_command ::= repetition_command command command | command command command command command ;
+command ::=  ass | if;
+ass ::= VARIABLE:var EQ bexpr:b S {:parser.table.put(var,b);:}; 
+
+bexpr ::= bexpr:a OR bexpr:b {: RESULT = a || b; :} |
+           bexpr:a AND bexpr:b  {: RESULT = a && b; :} |
+           RO bexpr:a RC  {: RESULT = a; :} |
+           NOT bexpr:a {: RESULT = !a; :} %prec UMINUS |
+           TRUE:a {: RESULT = true; :} |
+           FALSE:a {: RESULT = false; :}|
+           VARIABLE:a {: 
+                RESULT =  parser.table.get(a);
+           :};
+if ::= IF bexpr list_comp FI;
+list_comp ::= list_comp ORS bexpr:x DO print:p DONE{:
+        Boolean res = (Boolean) parser.stack(-6);
+        if(x == true || res == true) {
+                System.out.println(p);
+        }
+
+:} | list_comp ANDS bexpr:x DO print:p DONE {:
+        Boolean res = (Boolean) parser.stack(-6);
+        if(x == true && res == true) {
+                System.out.println(p);
+        }
+
+:}  | N ANDS bexpr:x DO print:p DONE {:
+        Boolean res = (Boolean) parser.stack(-6);
+        if(x == true && res == true) {
+                System.out.println(p);
+        }
+
+
+:}|  N ORS bexpr:x DO print:p DONE{:
+
+        Boolean res = (Boolean) parser.stack(-6);
+        if(x == true || res == true) {
+                System.out.println(p);
+        }
+:};
+
+print ::= PRINT QSTRING:x S{: RESULT = x;:};
+N ::= ;
+
+
+/*At the beginning to test it */
+// header ::= TOK1 S;
+
+
+
+/*1 token repeated N times, the others anywhere   */
+// header ::= header1 | header2 | header3;
+
+// header1 ::= header2 TOK3 S nt0;
+// header2 ::= header3 TOK3 S nt0 TOK3 S nt0;
+// header3 ::= nt0;
+//nt0 ::= | nt0 TOK1 S | nt0 TOK2 S;
+
+
+
+
+/*One token once, the other anywhere and at least twice*/
+// header ::= TOK2 S TOK1 S TOK2 S | nt0 TOK1 S TOK2 S | TOK2 S TOK1 S nt0 | nt0 TOK1 S nt0 | nt0 TOK1 S | TOK1 S nt0;
+// nt0 ::=  TOK2 S TOK2 S | nt0 TOK2 S ;
+
+
+
+/*TOK1 twice, TOK2 once, TOK3 0..*, order not fixed*/ 
+// header ::= nt0 TOK1 S nt0 TOK2 S nt0 TOK1 S nt0| nt0 TOK1 S nt0 TOK1 S nt0 TOK2 S nt0 | nt0 TOK2 S nt0 TOK1 S nt0 TOK1 S nt0;
+// nt0 ::= | nt0 TOK3 S;
+
+
+
+
+
+
+
+
+// math expressions
+// expr ::= expr:a PLUS expr:b {: RESULT = a + b; :} |
+//          expr:a MINUS expr:b {: RESULT = a - b; :} |
+//          expr:a STAR expr:b  {: RESULT = a * b; :} |
+//          expr:a DIV expr:b {: RESULT = a / b; :} |
+//          RO expr:a RC {: RESULT = a; :} |
+//          MINUS expr:a {: RESULT = -a; :} %prec UMINUS |
+//          REAL:a {: RESULT = a; :};
+
+// boolean expressions
+// bexpr ::= bexpr:a OR bexpr:b {: RESULT = a || b; :} |
+//           bexpr:a AND bexpr:b  {: RESULT = a && b; :} |
+//           RO bexpr:a RC {: RESULT = a; :} |
+//           NOT bexpr:a {: RESULT = !a; :} %prec UMINUS |
+//           T:a {: RESULT = true; :} |
+//           F:a {: RESULT = false; :}|
+
+//scan the hashmap to find minimum/maximum
+// String maxName = "", minName = "";
+// Double max = 0.0, min = Double.MAX_VALUE;
+
+//     for(HashMap<String, Double> hm: parser.table.values()){
+//     for(String s : hm.keySet()){
+//         Double val = hm.get(s);
+//         if(val > max){
+//             max = val;
+//             maxName = s;
+//         }
+//         if (val < min){
+//             min = val;
+//             minName = s;
+//         }
+//     }
+// }  
+
+//     System.out.println("less expensive: " + minName + " " + String.format("%.2f", min) + " EURO/kg");
+//     System.out.println("More expensive: " + maxName + " " + String.format("%.2f", max) + " EURO/kg");
+//     System.out.println("----");

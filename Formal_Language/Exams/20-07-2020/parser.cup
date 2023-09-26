@@ -1,0 +1,103 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+ 
+/*WATCH OUT: THE HASHTABLE CONTENT DEPENDS ON THE EXERCISE!*/
+init with {:
+    table = new HashMap<String, Integer>();
+:};
+ 
+parser code 	{:
+ 
+    public HashMap<String, Integer> table;
+ 
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+ 
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+
+:};
+
+
+/*TERMINAL SYMBOLS ARE WRITTEN USING UPPERCASE LETTERS*/
+terminal SEP, TOK1, TOK2, TOK3, S, CM, COL, EQ, COMP_W, WW, ENDW, PW, BO, BC;
+terminal PLUS, MINUS, STAR, DIV, UMINUS, RO, RC;
+terminal String QSTRING, VARIABLE;
+terminal Integer UINT;
+terminal Double REAL;
+
+
+non terminal starter, header, header1, header2, ltok1, ltok2, nt0, com_s, comm, assignment, compare, compl, plist, nt1;
+non terminal Integer expr;
+
+// Precedences and associativities
+// lower precedences
+precedence left PLUS, MINUS;
+precedence left STAR, DIV;
+precedence left UMINUS;
+// higher precedences
+
+
+
+start with starter;
+
+starter ::= header SEP com_s;
+
+header ::= header1 | header2;
+header1 ::= ltok1 ltok2;
+ltok1 ::= TOK1 S TOK1 S TOK1 S TOK1 S TOK1 S | ltok1 TOK1 S TOK1 S;
+ltok2 ::= TOK2 S TOK2 S TOK2 S |
+          TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S TOK2 S;
+header2 ::= TOK2 S nt0 TOK2 S nt0 TOK2 S nt0; 
+nt0 ::= | nt0 TOK1 S;
+
+// COMMAND SECTION
+
+com_s ::= com_s comm
+          | ;
+
+comm ::= assignment | compare;
+
+assignment ::= VARIABLE:a EQ expr:res S {: parser.table.put(a,res); :};
+
+//COMPARE
+
+compare ::= COMP_W expr WW compl ENDW S;
+
+compl ::= nt1 expr BO plist BC
+          | compl expr BO plist BC;
+
+nt1 ::= ;
+
+plist ::= PW expr:e S {: if((Integer)parser.stack(-4)==(Integer)parser.stack(-7)){System.out.println(e);} :}
+          | plist PW expr:e S {: if((Integer)parser.stack(-5)==(Integer)parser.stack(-8)){System.out.println(e);} :};
+
+
+//non empty list
+//list ::= list element | element;
+
+//empty list
+//listp ::= list | ;
+//list ::= list element | element;
+
+expr ::= expr:a PLUS expr:b {: RESULT = a + b; :} |
+         expr:a MINUS expr:b {: RESULT = a - b; :} |
+         expr:a STAR expr:b  {: RESULT = a * b; :} |
+         expr:a DIV expr:b {: RESULT = a / b; :} |
+         RO expr:a RC {: RESULT = a; :} |
+         MINUS expr:a {: RESULT = -a; :} %prec UMINUS |
+         UINT:a {: RESULT = a; :} |
+         VARIABLE:a {: RESULT=parser.table.get(a); :};

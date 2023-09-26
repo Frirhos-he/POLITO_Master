@@ -1,0 +1,54 @@
+import java_cup.runtime.*;
+
+
+parser code {:
+
+    public void report_error(String message, Object info) {
+        System.err.print("ERROR: Syntax error");
+        if (info instanceof Symbol)
+            if (((Symbol)info).left != -1){
+                int line = (((Symbol)info).left)+1;
+                int column = (((Symbol)info).right)+1;
+                System.err.print(" (linea "+line+", colonna "+column+"): ");
+            } else System.err.print(": ");
+        else System.err.print(": ");
+    }
+
+:};
+
+
+
+// Terminal tokens
+terminal MAJ, MINUS, PERC, COMM, SEM, COL;
+terminal ISBN_code, APICSNAME, N, LETTER, DATE, LS, LI, BO, AV, SO;
+
+// Non terminal tokens
+non terminal prog, second_sect, writer_books,book_list, userloan, loan_list,book, loan,let_gen;
+
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with prog;
+
+prog         ::= writer_books PERC PERC second_sect                    {:System.out.println("syntax of the subset is correct");:}
+;
+writer_books ::= APICSNAME MINUS MAJ book_list SEM | writer_books APICSNAME MINUS MAJ book_list SEM
+;
+book_list    ::= book_list COMM book | book 
+;
+book         ::= ISBN_code COL APICSNAME COL N |
+                 ISBN_code COL APICSNAME COL N COL let_gen  N | 
+                 ISBN_code COL APICSNAME COL N COL let_gen N LETTER
+;
+let_gen      ::= LI AV | LI SO | LS AV | LS SO | LS BO
+;
+second_sect  ::= second_sect userloan | userloan
+;
+userloan     ::= APICSNAME COL loan_list SEM
+;
+loan_list    ::= loan_list COMM loan | loan
+;
+loan         ::= DATE ISBN_code
+;

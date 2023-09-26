@@ -1,0 +1,204 @@
+21:15 22.53
+
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+ 
+/*WATCH OUT: THE HASHTABLE CONTENT DEPENDS ON THE EXERCISE!*/
+init with {:
+    table = new HashMap<String, HashMap<String, Integer>>();
+:};
+ 
+parser code 	{:
+ 
+    public HashMap<String, HashMap<String, Integer>> table;
+ 
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+ 
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+
+:};
+
+
+/*TERMINAL SYMBOLS ARE WRITTEN USING UPPERCASE LETTERS*/
+terminal SEP, TOK1, TOK2, TOK3, S, CM;
+terminal String QSTRING;
+terminal Integer UINT;
+terminal START_S, END_S, HOUSE;
+terminal IF, FI ,THEN;
+terminal AND, OR, NOT;
+terminal RO, RC, EQEQ, DOT;
+terminal PRINT;
+terminal N;
+terminal UMINUS;
+
+
+
+non terminal starter, header, houses;
+non terminal tok3rep;
+non terminal house;
+non terminal HashMap<String, Integer> room_list;
+non terminal Integer roomref;
+non terminal Integer size;
+non terminal Boolean bexpr;
+non terminal print_list;
+
+
+non terminal preferences;
+
+// non terminal header1, header2, header3, nt0;
+
+/*Precedences and associativities
+  lower precedences*/
+// precedence left PLUS, MINUS;
+// precedence left STAR, DIV;
+// precedence left UMINUS;
+/*higher precedences*/
+
+/*Boolean precedences*/
+ precedence left OR;
+ precedence left AND;
+ precedence left UMINUS;
+
+
+
+start with starter;
+
+starter ::= header SEP houses SEP preferences;
+
+header ::= tok3rep TOK1 S tok3rep TOK2 S tok3rep | tok3rep TOK2 S tok3rep TOK1 S tok3rep;
+
+tok3rep ::= tok3rep TOK3 S |; 
+
+
+houses ::= houses house house | house house;
+
+house::= HOUSE QSTRING:type START_S room_list:x END_S {:
+        parser.table.put(type,x);
+:};
+room_list::= room_list:x CM QSTRING:name UINT:size{:
+    x.put(name,size);
+    RESULT = x;
+
+:} | QSTRING:name UINT:size{:
+    HashMap<String, Integer> roomList = new HashMap<String, Integer>();
+    roomList.put(name,size);
+    RESULT = roomList;
+:};
+
+preferences ::= preferences IF bexpr THEN print_list FI |;
+
+ bexpr ::= bexpr:a OR bexpr:b {: RESULT = a || b; System.out.println("here"); :} |
+           bexpr:a AND bexpr:b  {: RESULT = a && b; :} |
+           RO bexpr:a RC {: RESULT = a; :} |
+           NOT bexpr:a {: RESULT = !a; :} %prec UMINUS |
+           roomref:a EQEQ UINT:c
+           {: 
+            System.out.println(c + "here" + a);
+            if((Integer)a == (Integer)c) RESULT = true;
+            else RESULT = false;
+            :}; 
+
+
+roomref::= QSTRING:type DOT QSTRING:roomname {:
+    HashMap<String,Integer> roomList = parser.table.get(type);
+    Integer size = roomList.get(roomname);
+    RESULT = size;
+:};
+
+
+print_list::= print_list PRINT QSTRING:x S{:
+    Boolean value =  (Boolean)parser.stack(-5);
+    if(value == true) System.out.println(x);
+:} | N PRINT QSTRING:x S{:
+    Boolean value =  (Boolean)parser.stack(-5);
+    if(value == true) System.out.println(x);
+:} | ;
+N ::=;
+
+
+/*At the beginning to test it */
+// header ::= TOK1 S;
+
+
+
+/*1 token repeated N times, the others anywhere   */
+// header ::= header1 | header2 | header3;
+
+// header1 ::= header2 TOK3 S nt0;
+// header2 ::= header3 TOK3 S nt0 TOK3 S nt0;
+// header3 ::= nt0;
+//nt0 ::= | nt0 TOK1 S | nt0 TOK2 S;
+
+
+
+
+/*One token once, the other anywhere and at least twice*/
+// header ::= TOK2 S TOK1 S TOK2 S | nt0 TOK1 S TOK2 S | TOK2 S TOK1 S nt0 | nt0 TOK1 S nt0 | nt0 TOK1 S | TOK1 S nt0;
+// nt0 ::=  TOK2 S TOK2 S | nt0 TOK2 S ;
+
+
+
+/*TOK1 twice, TOK2 once, TOK3 0..*, order not fixed*/ 
+// header ::= nt0 TOK1 S nt0 TOK2 S nt0 TOK1 S nt0| nt0 TOK1 S nt0 TOK1 S nt0 TOK2 S nt0 | nt0 TOK2 S nt0 TOK1 S nt0 TOK1 S nt0;
+// nt0 ::= | nt0 TOK3 S;
+
+
+
+
+
+
+
+
+// math expressions
+// expr ::= expr:a PLUS expr:b {: RESULT = a + b; :} |
+//          expr:a MINUS expr:b {: RESULT = a - b; :} |
+//          expr:a STAR expr:b  {: RESULT = a * b; :} |
+//          expr:a DIV expr:b {: RESULT = a / b; :} |
+//          RO expr:a RC {: RESULT = a; :} |
+//          MINUS expr:a {: RESULT = -a; :} %prec UMINUS |
+//          REAL:a {: RESULT = a; :};
+
+// boolean expressions
+// bexpr ::= bexpr:a OR bexpr:b {: RESULT = a || b; :} |
+//           bexpr:a AND bexpr:b  {: RESULT = a && b; :} |
+//           RO bexpr:a RC {: RESULT = a; :} |
+//           NOT bexpr:a {: RESULT = !a; :} %prec UMINUS |
+//           T:a {: RESULT = true; :} |
+//           F:a {: RESULT = false; :}|
+
+//scan the hashmap to find minimum/maximum
+// String maxName = "", minName = "";
+// Double max = 0.0, min = Double.MAX_VALUE;
+
+//     for(HashMap<String, Double> hm: parser.table.values()){
+//     for(String s : hm.keySet()){
+//         Double val = hm.get(s);
+//         if(val > max){
+//             max = val;
+//             maxName = s;
+//         }
+//         if (val < min){
+//             min = val;
+//             minName = s;
+//         }
+//     }
+// }  
+
+//     System.out.println("less expensive: " + minName + " " + String.format("%.2f", min) + " EURO/kg");
+//     System.out.println("More expensive: " + maxName + " " + String.format("%.2f", max) + " EURO/kg");
+//     System.out.println("----");

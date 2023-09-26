@@ -1,0 +1,45 @@
+import java_cup.runtime.*;
+
+
+parser code {:
+    public int flag = 0;
+    public void report_error(String message, Object info) {
+        System.err.print("ERROR: Syntax error");
+        if (info instanceof Symbol)
+            if (((Symbol)info).left != -1){
+                int line = (((Symbol)info).left)+1;
+                int column = (((Symbol)info).right)+1;
+                System.err.print(" (linea "+line+", colonna "+column+"): ");
+            } else System.err.print(": ");
+        else System.err.print(": ");
+    }
+:};
+
+
+
+// Terminal tokens
+terminal VARIABLE, ATOM, CL, DOT, QMARK,COM;
+terminal MINUS, FP, BP, SM,ID;
+
+// Non terminal tokens
+non terminal prog;
+non terminal component, fact, interrogation, rule, predicate, setPredicates, functor;
+non terminal setArguments, argument;
+
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with prog;
+
+prog          ::=   component interrogation component   {: System.out.println(flag);if(flag == 1)System.out.println("Success");:};
+component     ::=   component fact | component rule | ;
+fact          ::=   predicate DOT                       {: flag=1;System.out.println("FACT");:};
+rule          ::=   predicate CL MINUS setPredicates DOT; 
+interrogation ::=   QMARK MINUS setPredicates DOT;
+setPredicates ::=   setPredicates COM predicate | predicate;
+setArguments  ::=   setArguments COM argument | argument;
+predicate     ::=   functor setArguments BP | ATOM;
+functor       ::=   ATOM FP; 
+argument      ::=   predicate | VARIABLE;

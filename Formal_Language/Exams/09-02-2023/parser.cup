@@ -1,0 +1,128 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+ 
+/*WATCH OUT: THE HASHTABLE CONTENT DEPENDS ON THE EXERCISE!*/
+init with {:
+    table = new HashMap<String, HashMap<String, Double>>();
+:};
+ 
+parser code 	{:
+ 
+    public HashMap<String, HashMap<String, Double>> table;
+ 
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+ 
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+
+:};
+
+
+/*TERMINAL SYMBOLS ARE WRITTEN USING UPPERCASE LETTERS*/
+terminal SEP, TOK1, TOK2, TOK3, S, CM, COL, SO, SC, KGW, KW, DOT;
+//terminal PLUS, MINUS, STAR, DIV, UMINUS, RO, RC;
+//terminal DATE, HOUR, AMPM, IP, EXP, EMAIL, FILE; 
+terminal String QSTRING;
+terminal Integer UINT;
+terminal Double REAL, PRICE;
+
+
+non terminal starter, header, nt0, nt1, col, rname, receipel, rec;
+
+non terminal HashMap<String, Double> flist;
+non terminal cat, food;
+non terminal Double il;
+// non terminal header1, header2, header3, nt0;
+
+/*Precedences and associativities
+  lower precedences*/
+// precedence left PLUS, MINUS;
+// precedence left STAR, DIV;
+// precedence left UMINUS;
+/*higher precedences*/
+
+
+
+start with starter;
+
+starter ::= header SEP food SEP nt1 receipel ;
+
+header ::= TOK2 S TOK1 S TOK2 S | nt0 TOK1 S TOK2 S | TOK2 S TOK1 S nt0 | nt0 TOK1 S nt0 | nt0 TOK1 S | TOK1 S nt0;
+nt0 ::=  TOK2 S TOK2 S | nt0 TOK2 S ;
+
+// header ::= header1 | header2 | header3;
+
+// header1 ::= nt0 TOK1 S nt0;
+// header2 ::= TOK2 S nt0 TOK1 S nt0 TOK2 S nt0;
+// header3 ::= nt0;
+// nt0 ::= TOK2 S | nt0 TOK2 S;
+
+food ::= food:r cat:a cat:b 
+         | ;
+cat ::= QSTRING:k COL SO flist:m SC S {: parser.table.put(k,m);:};
+flist ::= QSTRING:k COL PRICE:p KGW {: HashMap<String, Double> tmp = new HashMap<String, Double>(); tmp.put(k,p); RESULT=tmp; :}
+          | flist:m CM QSTRING:k COL PRICE:p KGW {: HashMap<String, Double> table; table =m; table.put(k,p); RESULT = table; :} ;
+nt1 ::= {:  
+            String higherFoodName = "", lowerFoodName = "";
+            Double higherFoodValue = 0.0, lowerFoodValue = Double.MAX_VALUE;
+
+             for(HashMap<String, Double> hm: parser.table.values()){
+                for(String s : hm.keySet()){
+                    Double val = hm.get(s);
+                    if(val > higherFoodValue){
+                        higherFoodValue =val;
+                        higherFoodName = s;
+                    }
+                    if (val < lowerFoodValue){
+                        lowerFoodValue = val;
+                        lowerFoodName = s;
+                    }
+                }
+            }  
+
+                System.out.println("Less expensive: " + lowerFoodName + " " + String.format("%.2f", lowerFoodValue) + " EURO/kg");
+                System.out.println("More expensive: " + higherFoodName + " " + String.format("%.2f", higherFoodValue) + " EURO/kg");
+                System.out.println("----");
+:};
+
+
+receipel ::= receipel rec | ;
+rec ::= UINT rname col il:tot S {: System.out.println("TOT: " + tot + " EURO"); :} ;
+rname ::= QSTRING:s {:System.out.println('"' + s + '"'); :};
+col ::= COL | ;
+il ::= il:tot CM QSTRING:cat DOT QSTRING:food REAL:w KW {: HashMap<String, Double> table = parser.table.get(cat); Double price = table.get(food); price=price*w*(Integer)parser.stack(-9);
+                                                        System.out.println('"' + food + '"' + " " + price + " EURO"); RESULT=tot+price; :}
+       | QSTRING:cat DOT QSTRING:food REAL:w KW {: HashMap<String, Double> table = parser.table.get(cat); Double price = table.get(food); price=price*w*(Integer)parser.stack(-7);
+                                                        System.out.println('"' + food + '"' + " " + price + " EURO"); RESULT=price;:};
+
+
+//non empty list
+//list ::= list element | element;
+
+//empty list
+//listp ::= list | ;
+//list ::= list element | element;
+
+
+// math expressions
+// expr ::= expr:a PLUS expr:b {: RESULT = a + b; :} |
+//          expr:a MINUS expr:b {: RESULT = a - b; :} |
+//          expr:a STAR expr:b  {: RESULT = a * b; :} |
+//          expr:a DIV expr:b {: RESULT = a / b; :} |
+//          RO expr:a RC {: RESULT = a; :} |
+//          MINUS expr:a {: RESULT = -a; :} %prec UMINUS |
+//          REAL:a {: RESULT = a; :};

@@ -1,0 +1,107 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+ 
+/*WATCH OUT: THE HASHTABLE CONTENT DEPENDS ON THE EXERCISE!*/
+init with {:
+    table = new HashMap<String, Double>();
+:};
+ 
+parser code 	{:
+ 
+    public HashMap<String, Double> table;
+ 
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+ 
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+
+:};
+
+
+/*TERMINAL SYMBOLS ARE WRITTEN USING UPPERCASE LETTERS*/
+terminal SEP, TOK1, TOK2, TOK3, S, CM, COL, SW, BW, KW, FW, LW, MW, UW, DW, DONE, KM, UKM;
+terminal PLUS, MINUS, STAR, DIV, UMINUS, RO, RC, MAX;
+terminal String QSTRING;
+terminal Integer UINT;
+terminal Double REAL;
+
+
+non terminal starter, comm, header, header1, header2, header3, nt0, runcmd, startcmd, coml, bat, fl, nt1, cmd, consl, use, mod, nt2;
+non terminal Double expr, expl;
+non terminal String ptype;
+
+// Precedences and associativities
+// lower precedences
+precedence left PLUS, MINUS;
+precedence left STAR, DIV;
+precedence left UMINUS;
+// higher precedences
+
+
+
+start with starter;
+
+starter ::= header SEP runcmd;
+
+header ::= header1 | header2 | header3;
+
+header1 ::= header2 TOK2 S nt0;
+header2 ::= header3 TOK2 S nt0 TOK2 S nt0;
+header3 ::= nt0;
+
+nt0 ::= | nt0 TOK1 S;
+
+runcmd ::= startcmd coml;
+startcmd ::= nt1 SW bat MINUS fl nt2 S | nt1 SW fl MINUS bat nt2 S | nt1 SW cmd MINUS nt2 S | nt1 SW MINUS cmd nt2 S | nt1 SW MINUS nt2 S;
+nt1 ::= {: parser.table.put("battery",100.0);parser.table.put("fuel",100.0); :};
+nt2 ::= {: System.out.println("battery=" + (Double)parser.table.get("battery") + " fuel=" + (Double)parser.table.get("fuel"));:};
+bat ::= BW expr:e KW {: parser.table.put("battery",e); :};
+fl::= FW expr:e LW {:parser.table.put("fuel",e); :};
+cmd ::= bat | fl;
+
+
+
+
+
+coml ::= comm comm comm comm | coml comm comm;
+
+comm ::= mod S | use S;
+mod ::= MW ptype:k expr:v {: Double value=(Double)parser.table.get(k); value+=v; parser.table.put(k,value); System.out.println("battery=" + (Double)parser.table.get("battery") + " fuel=" + (Double)parser.table.get("fuel")); :};
+
+ptype ::= BW {: RESULT = new String("battery"); :} 
+          | FW {: RESULT = new String("fuel"); :};
+
+use ::= UW ptype:k DW consl DONE;
+
+consl ::= expr:a KM expr:b UKM S{: Double c = a*b; Double value = (Double)parser.table.get((String)parser.stack(-6)); parser.table.put((String)parser.stack(-6),value-c); System.out.println("battery=" + (Double)parser.table.get("battery") + " fuel=" + (Double)parser.table.get("fuel"));:}
+          | consl expr:a KM expr:b UKM S{: Double c = a*b; Double value = (Double)parser.table.get((String)parser.stack(-7)); parser.table.put((String)parser.stack(-7),value-c); System.out.println("battery=" + (Double)parser.table.get("battery") + " fuel=" + (Double)parser.table.get("fuel"));:};
+
+
+//non empty list
+//list ::= list element | element;
+
+//empty list
+//listp ::= list | ;
+//list ::= list element | element;
+
+expr ::= expr:a PLUS expr:b {: RESULT = a + b; :} |
+         expr:a STAR expr:b  {: RESULT = a * b; :} |
+         MAX RO expl:a RC {: RESULT=a; :}|
+         REAL:a {: RESULT = a; :};
+
+expl ::= expr:e {: RESULT=e; :}
+         | expl:a CM expr:b {: if(a>b){RESULT=a;}else{RESULT=b;} :};

@@ -1,0 +1,161 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+ 
+/*WATCH OUT: THE HASHTABLE CONTENT DEPENDS ON THE EXERCISE!*/
+init with {:
+    table = new HashMap<String, Integer>();
+:};
+ 
+parser code 	{:
+ 
+    public HashMap<String, Integer> table;
+ 
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+ 
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+
+:};
+
+
+/*TERMINAL SYMBOLS ARE WRITTEN USING UPPERCASE LETTERS*/
+terminal SEP, TOK1, TOK2, TOK3, S, CM, COL, SW, BW, PW, PRW, CW, COMPW, PX, PY, PZ, IW, DW, DONEW, LW, HW, BETW, ANDW;
+terminal String MW, AW;
+terminal PLUS, MINUS, STAR, DIV, UMINUS, RO, RC;
+//terminal DATE, HOUR, AMPM, IP, EXP, EMAIL, FILE; 
+terminal String QSTRING;
+terminal Integer UINT, SINT;
+terminal Double REAL;
+
+
+non terminal starter, header, drone, set, coml, com, print, change, compute, incase, cl, insl, condprint, condchange, ins,  nt2;
+non terminal header1, header2, header3, nt0;
+non terminal Integer val;
+non terminal Integer[] vl;
+non terminal String stat;
+non terminal Boolean interval;
+
+/*Precedences and associativities
+  lower precedences*/
+// precedence left PLUS, MINUS;
+// precedence left STAR, DIV;
+// precedence left UMINUS;
+/*higher precedences*/
+
+
+
+start with starter;
+
+starter ::= header SEP drone;
+
+
+header ::= header1 | header2 | header3;
+
+header1 ::= header2 TOK3 S nt0;
+header2 ::= header3 TOK3 S nt0 TOK3 S nt0;
+header3 ::= nt0;
+nt0 ::= | nt0 TOK1 S | nt0 TOK2 S;
+
+
+drone ::= set S coml;
+
+set ::= SW PW SINT:x SINT:y SINT:z MINUS BW SINT:b {: parser.table.put("x",x); parser.table.put("y",y); parser.table.put("z",z); parser.table.put("b",b); 
+                                                      System.out.println("BATTERY: " + b + " - POS: " + x + " " + y + " " + z);:}
+        | SW BW SINT:b MINUS PW SINT:x SINT:y SINT:z {: parser.table.put("x",x); parser.table.put("y",y); parser.table.put("z",z); parser.table.put("b",b); 
+                                                        System.out.println("BATTERY: " + b + " - POS: " + x + " " + y + " " + z);:};
+
+coml ::= com S com S com S com S com S com S com S | coml com S com S;
+com ::= print | change | compute | incase;
+
+print ::= PRW QSTRING:x {: System.out.println(x); :};
+
+change ::= CW PW SINT:x SINT:y SINT:z MINUS BW SINT:b {: Integer nx, ny, nz, nb; nx=parser.table.get("x"); ny=parser.table.get("y"); nz=parser.table.get("z"); nb=parser.table.get("b"); 
+                                                        nx+=x; ny+=y; nz+=z; nb+=b;
+                                                        parser.table.put("x",nx); parser.table.put("y",ny); parser.table.put("z",nz); parser.table.put("b",nb);
+                                                        System.out.println("BATTERY: " + nb + " - POS: " + nx + " " + ny + " " + nz);:}
+           | CW BW SINT:b MINUS PW SINT:x SINT:y SINT:z {:Integer nx, ny, nz, nb; nx=parser.table.get("x"); ny=parser.table.get("y"); nz=parser.table.get("z"); nb=parser.table.get("b"); 
+                                                        nx+=x; ny+=y; nz+=z; nb+=b;
+                                                        parser.table.put("x",nx); parser.table.put("y",ny); parser.table.put("z",nz); parser.table.put("b",nb);
+                                                        System.out.println("BATTERY: " + nb + " - POS: " + nx + " " + ny + " " + nz);:}
+           | CW PW SINT:x SINT:y SINT:z {: Integer nx, ny, nz, nb; nx=parser.table.get("x"); ny=parser.table.get("y"); nz=parser.table.get("z"); nb=parser.table.get("b"); 
+                                                        nx+=x; ny+=y; nz+=z;
+                                                        parser.table.put("x",nx); parser.table.put("y",ny); parser.table.put("z",nz);
+                                                        System.out.println("BATTERY: " + nb + " - POS: " + nx + " " + ny + " " + nz);:}
+           | CW BW SINT:b {: Integer nx, ny, nz, nb; nx=parser.table.get("x"); ny=parser.table.get("y"); nz=parser.table.get("z"); nb=parser.table.get("b"); 
+                                                        nb+=b;
+                                                        parser.table.put("b",nb);
+                                                        System.out.println("BATTERY: " + nb + " - POS: " + nx + " " + ny + " " + nz);:};
+
+compute ::= COMPW RO stat:c CM vl:r RC {: Double result; int a,b; double tmp; if(c.equals("MAX")){System.out.println(r[0]);}else{a=r[0]; b=r[1]; tmp=(double)a; result=tmp/b; System.out.println(result);} :};
+
+vl ::= val:x {: RESULT = new Integer[2]; if(((String)parser.stack(-2)).equals("MAX")){RESULT[0] = x;}else{RESULT[0]=x; RESULT[1]=1;} :} 
+       | vl:a CM val:b {: RESULT = new Integer[2]; if(((String)parser.stack(-4)).equals("MAX")){if(a[0]<b){RESULT[0]=b;}else{RESULT[0]=a[0];}}else{RESULT[0]=a[0]+b; RESULT[1]=a[1]+1;} :} ;
+
+val ::= PX {: RESULT = parser.table.get("x"); :}
+      | PY {: RESULT = parser.table.get("y"); :}
+      | PZ {: RESULT = parser.table.get("z"); :}
+      | BW {: RESULT = parser.table.get("b"); :}
+      | SINT:i {: RESULT = i; :};
+
+stat ::= AW:a {: RESULT = a; :} 
+         | MW:a {: RESULT = a; :} ;
+
+incase ::= IW val cl;
+
+cl ::= nt2 interval DW insl DONEW | cl interval DW insl DONEW;
+nt2 ::=;
+interval ::= HW SINT:a {: RESULT= (Integer)parser.stack(-3)>a; :} 
+             | LW SINT:a {: RESULT= (Integer)parser.stack(-3)<a; :} 
+             | BETW SINT:a ANDW SINT:b {: RESULT= (Integer)parser.stack(-5)>=a && (Integer)parser.stack(-5)<=b; :};
+insl ::= nt2 ins | insl ins;
+ins ::= condprint S | condchange S;
+
+condprint ::= PRW QSTRING:x {: if((Boolean)parser.stack(-4)){System.out.println(x);} :};
+
+condchange ::= CW PW SINT:x SINT:y SINT:z MINUS BW SINT:b {: if((Boolean)parser.stack(-10)){Integer nx, ny, nz, nb; nx=parser.table.get("x"); ny=parser.table.get("y"); nz=parser.table.get("z"); nb=parser.table.get("b"); 
+                                                        nx+=x; ny+=y; nz+=z; nb+=b;
+                                                        parser.table.put("x",nx); parser.table.put("y",ny); parser.table.put("z",nz); parser.table.put("b",nb);
+                                                        System.out.println("BATTERY: " + nb + " - POS: " + nx + " " + ny + " " + nz);}:}
+           | CW BW SINT:b MINUS PW SINT:x SINT:y SINT:z {:if((Boolean)parser.stack(-10)){Integer nx, ny, nz, nb; nx=parser.table.get("x"); ny=parser.table.get("y"); nz=parser.table.get("z"); nb=parser.table.get("b"); 
+                                                        nx+=x; ny+=y; nz+=z; nb+=b;
+                                                        parser.table.put("x",nx); parser.table.put("y",ny); parser.table.put("z",nz); parser.table.put("b",nb);
+                                                        System.out.println("BATTERY: " + nb + " - POS: " + nx + " " + ny + " " + nz);}:}
+           | CW PW SINT:x SINT:y SINT:z {: if((Boolean)parser.stack(-7)){Integer nx, ny, nz, nb; nx=parser.table.get("x"); ny=parser.table.get("y"); nz=parser.table.get("z"); nb=parser.table.get("b"); 
+                                                        nx+=x; ny+=y; nz+=z;
+                                                        parser.table.put("x",nx); parser.table.put("y",ny); parser.table.put("z",nz);
+                                                        System.out.println("BATTERY: " + nb + " - POS: " + nx + " " + ny + " " + nz);}:}
+           | CW BW SINT:b {: if((Boolean)parser.stack(-5)){Integer nx, ny, nz, nb; nx=parser.table.get("x"); ny=parser.table.get("y"); nz=parser.table.get("z"); nb=parser.table.get("b"); 
+                                                        nb+=b;
+                                                        parser.table.put("b",nb);
+                                                        System.out.println("BATTERY: " + nb + " - POS: " + nx + " " + ny + " " + nz);}:};
+
+//non empty list
+//list ::= list element | element;
+
+//empty list
+//listp ::= list | ;
+//list ::= list element | element;
+
+
+// math expressions
+// expr ::= expr:a PLUS expr:b {: RESULT = a + b; :} |
+//          expr:a MINUS expr:b {: RESULT = a - b; :} |
+//          expr:a STAR expr:b  {: RESULT = a * b; :} |
+//          expr:a DIV expr:b {: RESULT = a / b; :} |
+//          RO expr:a RC {: RESULT = a; :} |
+//          MINUS expr:a {: RESULT = -a; :} %prec UMINUS |
+//          REAL:a {: RESULT = a; :};

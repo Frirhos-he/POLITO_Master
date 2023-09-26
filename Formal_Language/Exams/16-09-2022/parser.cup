@@ -1,0 +1,140 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+ 
+/*WATCH OUT: THE HASHTABLE CONTENT DEPENDS ON THE EXERCISE!*/
+init with {:
+    table = new HashMap<String, Boolean>();
+:};
+ 
+parser code 	{:
+ 
+    public HashMap<String, Boolean> table;
+ 
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+ 
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+
+:};
+
+
+/*TERMINAL SYMBOLS ARE WRITTEN USING UPPERCASE LETTERS*/
+terminal SEP, TOK1, TOK2, TOK3, S, CMP;
+//terminal PLUS, MINUS, STAR, DIV, UMINUS, RO, RC;
+terminal AND, OR, NOT, UMINUS, RO, RC;
+//terminal DATE, HOUR, AMPM, IP, EXP, EMAIL, FILE; 
+terminal String  VARIABLE;
+//terminal Integer UINT;
+//terminal Double REAL, PRICE;
+terminal UPPERCASE, LOWERCASE;
+terminal WORDS;
+terminal Boolean T;
+terminal Boolean F;
+terminal WITH;
+terminal PRINT;
+terminal SO,SC;
+terminal String QSTRING;
+terminal EQ;
+terminal DIV;
+terminal EMAIL;
+
+
+
+non terminal starter, header, command_section, list_command, command;
+non terminal assignment, cmp;
+non terminal Boolean bexpr;
+non terminal Boolean bool_expr_a ;
+non terminal action_lists, action_v, print;
+non terminal sep_tok, sep_tok2;
+
+
+non terminal repetition_lowercase;
+non terminal repetition;
+non terminal repetition_words;
+non terminal token1,token2, tokenCombination;
+
+
+
+// non terminal header1, header2, header3, nt0;
+
+/*Precedences and associativities
+  lower precedences*/
+// precedence left PLUS, MINUS;
+// precedence left STAR, DIV;
+// precedence left UMINUS;
+/*higher precedences*/
+
+/*Boolean precedences*/
+ precedence left OR;
+ precedence left AND;
+ precedence left UMINUS;
+
+
+
+start with starter;
+
+starter ::= header SEP command_section;
+
+header ::= tokenCombination | tokenCombination token2 S tokenCombination | tokenCombination token2 S tokenCombination token2 S tokenCombination token2 S tokenCombination token2 S tokenCombination ;
+
+tokenCombination::= tokenCombination token1 S |tokenCombination TOK3 S | ;
+
+token1 ::= TOK1 repetition_lowercase UPPERCASE repetition_lowercase UPPERCASE repetition_lowercase UPPERCASE repetition_lowercase UPPERCASE repetition_lowercase  UPPERCASE repetition_lowercase UPPERCASE repetition octal WORDS WORDS WORDS WORDS repetition_words;
+
+repetition_words ::= repetition_words WORDS |;
+
+repetition ::=  repetition LOWERCASE | repetition UPPERCASE | ; 
+repetition_lowercase ::= repetition_lowercase LOWERCASE | ;
+
+token2::= EMAIL sep_tok2 EMAIL | 
+          EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL |
+          EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL sep_tok2 EMAIL   ;
+sep_tok2::= DIV | NOT;
+
+
+//command_section
+command_section ::= | list_command;
+list_command ::= command command command command| list_command command command ;
+
+command ::= assignment | cmp;
+
+assignment ::= VARIABLE:var EQ bexpr:bools {:
+            parser.table.put(var,bools);
+            System.out.println("Variable "+var + " Value:"+ bools);
+:} ;    
+
+cmp ::= CMP bexpr action_lists;
+action_lists::= action_lists action_v | action_v;
+action_v ::= WITH bool_expr_a SO print SC;
+
+
+bool_expr_a ::= bexpr;
+
+print ::= PRINT RO QSTRING RC S;
+
+// boolean expressions
+ bexpr ::= bexpr:a OR bexpr:b {: RESULT = a || b; :} |
+           bexpr:a AND bexpr:b  {: RESULT = a && b; :} |
+           RO bexpr:a RC {: RESULT = a; :} |
+           NOT bexpr:a {: RESULT = !a; :} %prec UMINUS |
+           T:a {: RESULT = true; :} |
+           F:a {: RESULT = false; :}|
+           VARIABLE:a {:
+            Boolean res = parser.table.get(a);
+            RESULT = res;
+           :}; // to add  fz_and();
+

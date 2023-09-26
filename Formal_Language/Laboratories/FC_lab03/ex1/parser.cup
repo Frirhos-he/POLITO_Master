@@ -1,0 +1,142 @@
+import java_cup.runtime.*;
+
+
+parser code {:
+
+    public void report_error(String message, Object info) {
+        System.err.print("ERROR: Syntax error");
+        if (info instanceof Symbol)
+            if (((Symbol)info).left != -1){
+                int line = (((Symbol)info).left)+1;
+                int column = (((Symbol)info).right)+1;
+                System.err.print(" (linea "+line+", colonna "+column+"): ");
+            } else System.err.print(": ");
+        else System.err.print(": ");
+    }
+:};
+
+
+
+// Terminal tokens
+terminal INT, DOUBLE, ID, INDEX;
+terminal PRINT, IF, WHILE,  THEN, ELSE;
+terminal RO, RC, BO, BC, SC, CM, SO, S;
+terminal PLUS, MINUS, STAR, DIV;
+terminal MIN, MAJ, MIN_EQ, EQ_MIN, MAJ_EQ, EQ_MAJ, EQ;
+terminal AND, OR, NOT;
+terminal INT_TYPE, DOUBLE_TYPE;
+
+
+// Non terminal tokens
+non terminal prog;
+
+
+
+
+//////////////////////////////////////
+// Grammar start
+//////////////////////////////////////
+
+start with prog;
+
+
+prog ::= decl_list stmt_list {: System.out.println("Programma riconosciuto"); :}
+;
+
+
+//////////////////////////////////////
+// Declarations
+//////////////////////////////////////
+
+decl_list ::= decl_list decl | 
+;
+
+decl ::= type var_list PV
+;
+
+type ::= INT_TYPE | DOUBLE_TYPE
+;
+
+var_list ::= var | var_list VIR var
+;
+
+var ::= ID array
+;
+
+array ::= | array QO INT QC
+;
+
+
+//////////////////////////////////////
+// Instructions
+//////////////////////////////////////
+
+stmt_list ::= stmt_list stmt | stmt 
+;
+
+
+stmt ::= if | while | assignment | print | GO stmt_list GC
+;
+
+// Assignment instruction
+assignment ::= id PV | id UG exp PV 
+;
+
+// PRINT instruction
+print ::= PRINT id PV
+;
+
+
+// IF instruction
+if ::= IF if_condition stmt ELSE stmt
+     | IF if_condition stmt
+;
+
+if_condition ::= TO exp TC
+;
+
+
+// WHILE instruction
+while ::= WHILE while_condition stmt
+;
+
+while_condition ::= TO exp TC
+;
+
+
+// Expressions
+exp ::= 
+    /* Espressioni logiche */
+    exp AND exp
+    | exp OR exp
+    | NOT exp
+
+    /* Espressioni di confronto */
+    | exp UG UG exp
+    | exp MIN exp
+    | exp MAG exp
+    | exp minug exp
+    | exp magug exp
+
+    /* Espressioni aritmetiche */
+    | exp PIU exp
+    | exp MEN exp
+    | exp PER exp
+    | exp DIV exp
+    | TO exp TC
+    | id
+    | INT
+    | DOUBLE
+    | MEN INT
+    | MEN DOUBLE
+;
+
+
+minug ::= MIN_UG | UG_MIN;
+magug ::= MAG_UG | UG_MAG;
+
+
+id ::= ID
+      |ID QO INT QC
+      |ID QO ID QC
+;

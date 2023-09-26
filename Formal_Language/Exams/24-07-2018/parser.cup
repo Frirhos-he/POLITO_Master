@@ -1,0 +1,133 @@
+import java_cup.runtime.*;
+import java.util.*;
+import java.io.*;
+ 
+/*WATCH OUT: THE HASHTABLE CONTENT DEPENDS ON THE EXERCISE!*/
+init with {:
+    table = new HashMap<String, HashMap<String, Double>>();
+:};
+ 
+parser code 	{:
+ 
+    public HashMap<String, HashMap<String, Double>> table;
+ 
+    public void report_error(String message, Object info) {
+        StringBuffer m = new StringBuffer(message);
+        if (info instanceof Symbol) {
+            if (((Symbol)info).left != 1 && ((Symbol)info).right != 1) {
+                if (((Symbol)info).left != -1 && ((Symbol)info).right != -1) {
+                    int line = (((Symbol)info).left) + 1;
+                    int column = (((Symbol)info).right) + 1;
+                    m.append(" (line " + line + " column " + column + ")");
+                }
+            }
+            System.err.println(m);
+        }
+    }
+ 
+    public Object stack(int position) {
+        return (((Symbol)stack.elementAt(tos + position)).value);
+    }
+
+:};
+
+
+/*TERMINAL SYMBOLS ARE WRITTEN USING UPPERCASE LETTERS*/
+terminal SEP, TOK1, TOK2, TOK3, S, CM, COL, ARR, KMW, CW, TOW, TW, EXPW, EW, PC, KMH, EKM, DWORD, EURO, DW;
+terminal PLUS, MINUS, STAR, DIV, UMINUS, RO, RC;
+//terminal DATE, HOUR, AMPM, IP, EXP, EMAIL, FILE; 
+terminal String QSTRING;
+terminal Integer UINT;
+terminal Double REAL, DISCOUNT;
+
+
+non terminal starter, header, nt0, comm, dlist, dist, compl, com, nt1;
+non terminal Double[] tlist;
+non terminal HashMap<String, Double> destl;
+non terminal Double exp,edlist,elist,dexp;
+// non terminal header1, header2, header3, nt0;
+
+/*Precedences and associativities
+  lower precedences*/
+// precedence left PLUS, MINUS;
+// precedence left STAR, DIV;
+// precedence left UMINUS;
+/*higher precedences*/
+
+
+
+start with starter;
+
+starter ::= header SEP comm;
+
+
+/*At the beginning to test it */
+header ::= nt0 TOK1 S nt0 TOK2 S nt0 TOK1 S nt0| nt0 TOK1 S nt0 TOK1 S nt0 TOK2 S nt0 | nt0 TOK2 S nt0 TOK1 S nt0 TOK1 S nt0;
+nt0 ::= | nt0 TOK3 S;
+
+
+/*1 token repeated N times, the others anywhere   */
+// header ::= header1 | header2 | header3;
+
+// header1 ::= header2 TOK3 S nt0;
+// header2 ::= header3 TOK3 S nt0 TOK3 S nt0;
+// header3 ::= nt0;
+//nt0 ::= | nt0 TOK1 S | nt0 TOK2 S;
+
+
+
+
+/*One token once, the other anywhere and at least twice*/
+// header ::= TOK2 S TOK1 S TOK2 S | nt0 TOK1 S TOK2 S | TOK2 S TOK1 S nt0 | nt0 TOK1 S nt0 | nt0 TOK1 S | TOK1 S nt0;
+// nt0 ::=  TOK2 S TOK2 S | nt0 TOK2 S ;
+
+
+comm ::= dlist compl | dlist;
+dlist ::= dist dist dist | dlist dist dist;
+
+dist ::= QSTRING:k ARR destl:m S {: parser.table.put(k,m); :};
+
+destl ::= QSTRING:k REAL:v KMW {: HashMap<String, Double> table = new HashMap<String, Double>(); table.put(k,v); RESULT=table; :}
+          | destl:t CM QSTRING:k REAL:v KMW {: t.put(k,v); RESULT=t; :};
+
+compl ::= com |compl com com; 
+
+com ::= CW QSTRING TOW QSTRING TW COL tlist:t S {: System.out.println("TOT: " + t[0]); :}
+        |CW QSTRING:n TOW QSTRING EXPW nt1 nt1 COL elist:e S {: System.out.println("MIN: " + e); :}
+        | CW QSTRING:n TOW QSTRING EXPW EW DISCOUNT COL edlist:e S {: System.out.println("MIN: " + e); :};
+
+nt1 ::= ;
+
+tlist ::= UINT:p PC UINT:s KMH {: HashMap<String, Double> table = parser.table.get((String)parser.stack(-8)); Double dist = table.get((String)parser.stack(-6)); 
+                                  Double res = (dist*p)/(100*s); System.out.println("0 " + res); RESULT=new Double[2]; RESULT[0]=res; RESULT[1]=1.0; :}
+          | tlist:i CM UINT:p PC UINT:s KMH {: HashMap<String, Double> table = parser.table.get((String)parser.stack(-10)); Double dist = table.get((String)parser.stack(-8)); 
+                                         Double res = (dist*p)/(100*s); System.out.println(i[1] + " " + res); RESULT=new Double[2]; RESULT[0]=i[0]+res;RESULT[1]=i[1]+1; :};
+
+elist ::= nt1 nt1 exp:e {: RESULT = e; :}
+          | elist:l CM exp:e {: if(e<l){RESULT = e;}else{RESULT=l;}; :};
+
+exp ::= QSTRING:n DISCOUNT:p1 EKM MINUS DW DISCOUNT:p2 EURO {: HashMap<String, Double> table = parser.table.get((String)parser.stack(-15)); Double dist = table.get((String)parser.stack(-13));
+                                                      Double res = dist*p1-p2; System.out.println(n + " " + res); RESULT=new Double(res); :}
+        | QSTRING:n DW DISCOUNT:p2 EURO MINUS DISCOUNT:p1 EKM {: HashMap<String, Double> table = parser.table.get((String)parser.stack(-15)); Double dist = table.get((String)parser.stack(-13));
+                                                      Double res = dist*p1-p2; System.out.println(n + " " + res); RESULT=new Double(res); :}
+        | QSTRING:n DISCOUNT:p1 EKM {: HashMap<String, Double> table = parser.table.get((String)parser.stack(-11)); Double dist = table.get((String)parser.stack(-9));
+                                    Double res = dist*p1; System.out.println(n + " " + res); RESULT=new Double(res); :};
+
+edlist ::= nt1 nt1 dexp:e {: RESULT = e; :}
+           | edlist:l CM dexp:e {: if(e<l){RESULT = e;}else{RESULT=l;}; :};
+
+dexp ::= QSTRING:n DISCOUNT:p1 EKM MINUS DW DISCOUNT:p2 EURO {:  HashMap<String, Double> table = parser.table.get((String)parser.stack(-15)); Double dist = table.get((String)parser.stack(-13));
+                                                            Double res = dist*p1-p2-(Double)parser.stack(-10); System.out.println(n + " " + res); RESULT=new Double(res); :}
+        | QSTRING:n DW DISCOUNT:p2 EURO MINUS DISCOUNT:p1 EKM {:  HashMap<String, Double> table = parser.table.get((String)parser.stack(-15)); Double dist = table.get((String)parser.stack(-13));
+                                                            Double res = dist*p1-p2-(Double)parser.stack(-10); System.out.println(n + " " + res); RESULT=new Double(res); :}
+        | QSTRING:n DISCOUNT:p1 EKM {:  HashMap<String, Double> table = parser.table.get((String)parser.stack(-11)); Double dist = table.get((String)parser.stack(-9));
+                                        Double res = dist*p1-(Double)parser.stack(-6); System.out.println(n + " " + res); RESULT=new Double(res); :};
+
+// math expressions
+// expr ::= expr:a PLUS expr:b {: RESULT = a + b; :} |
+//          expr:a MINUS expr:b {: RESULT = a - b; :} |
+//          expr:a STAR expr:b  {: RESULT = a * b; :} |
+//          expr:a DIV expr:b {: RESULT = a / b; :} |
+//          RO expr:a RC {: RESULT = a; :} |
+//          MINUS expr:a {: RESULT = -a; :} %prec UMINUS |
+//          REAL:a {: RESULT = a; :};
