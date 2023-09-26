@@ -1,0 +1,46 @@
+MATRIX:
+- MAIN DIAGONAL: INDEX=(N+1)*I
+----------------------------------------------------
+- SUBDIAMETER: INDEX=(N-1)*(I+1)
+----------------------------------------------------
+- TARANAHADE: M*N --> N*M =>  IF (INDEX<N) THEN NEW_INDEX=INDEX*2 | IF (INDEX>=N)  NEW_INDEX=((INDEX*M)%(M*N))+I
+----------------------------------------------------
+- ROATATE COLUMN TO LEFT: NEW_INDEX= ((R*M)+INDEX)%(M*N)
+MATRIX IS N*M
+M IS MATRIX COLUMN 
+N IS MATRIX ROW
+R IS ROATE NUMBERS
+----------------------------------------------------
+- MATRIX IS N*M:
+EACH ROW WITH ROW BELOW:  NEW_INDEX=(INDEX+N)%(M*N)
+----------------------------------------------------C
+- SORT MATRIX:
+FOR (I=1;I<N;I++)
+{
+INDEX=I;
+TEMP=S[I];
+ FOR(J=I+1;J<N;J++)
+ {
+   IF(TEMP>=S[K]) ; HERE (>= OR <=) DEPENDS ON ASC OR DESC
+   {
+     INDEX=J;
+	 TEMP=S[J];
+	 
+   }
+ }
+S[INDEX]=S[I];
+S[I]=TEMP;
+}
+----------------------------------------------------
+- DIV WITH FLOATING POINT: AX=DIVIDEND  DH=0  DL=AH   AH=AL   AL=0   BH=0   BL=DIVISOR     AX/BX      RESULT=AX
+----------------------------------------------------
+- EVEN/ODD: TEST AX,1 JZ EVEN   JNZ ODD
+----------------------------------------------------
+- 8 BITS: 
+ - UNSIGNED: 0...255
+ - SIGNED: -128...0...127
+- 16 BITS:
+ - UNSIGNED: 0...65536
+ - SIGNED: -32768...0...32768
+ ----------------------------------------------------
+ 

@@ -1,0 +1,47 @@
+.MODEL SMALL
+
+.STACK
+
+.DATA
+RES DB 0
+SUM DB 1
+I DB 2 
+NUMBER DB 28
+.STARTUP
+ 
+ MOV BL,NUMBER
+ SHR BL,1;BL=X/2
+ 
+LOOP1: ;FOR I=2 ; I<=X/2; I++   
+CMP  I,BL
+JG   COMPARE 
+MOV AX,0 
+MOV AL,NUMBER
+DIV I;NUMBER/I  
+CMP AH,0 ;X%I==0 THEN SUM+=I
+JNE NEXT
+MOV AL,SUM
+ADD AL,I
+MOV SUM,AL
+ 
+ 
+NEXT:   INC I 
+        JMP LOOP1
+ 
+COMPARE:    MOV AX,0
+            MOV AL,NUMBER
+           CMP AL,SUM
+           JE  SET  
+           JMP ENDPR
+           
+SET:    INC RES
+
+ENDPR:
+
+.EXIT
+
+END
+
+
+
+

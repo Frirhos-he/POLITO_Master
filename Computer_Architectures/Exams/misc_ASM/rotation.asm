@@ -1,0 +1,47 @@
+.MODEL small
+.STACK
+.DATA
+MATRIX_ROW DB 'A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P'
+MATRIX_COLUMN DB 'A','E','I','M','B','F','J','N','C','G','K','O','D','H','L','P'
+.CODE
+.STARTUP
+
+PUSH AX
+PUSH BX
+PUSH CX
+PUSH DX
+PUSH SI
+PUSH DI
+;FIRST READ N
+MOV AH, 1
+MOV CX, 0
+INT 21H
+SUB AL, '0'
+MOV CL, AL
+ROTATEc: MOV SI, 0
+         MOV DI, 0
+         MOV AX, WORD PTR MATRIX_COLUMN[SI]
+         ADD SI, 2
+         MOV BX, WORD PTR MATRIX_COLUMN[SI]
+         PUSH AX
+         PUSH BX
+         ADD SI, 2
+COLUMN:  MOV AX, WORD PTR MATRIX_COLUMN[SI]
+         MOV WORD PTR MATRIX_COLUMN[DI], AX
+         ADD SI, 2
+         ADD DI, 2
+         CMP DI, 12
+         JNE COLUMN
+         POP BX
+         POP AX
+         MOV WORD PTR MATRIX_COLUMN[DI], AX
+         ADD DI, 2
+         MOV WORD PTR MATRIX_COLUMN[DI], BX
+         LOOP ROTATEc
+POP SI
+POP DI
+POP DX
+POP CX
+POP BX
+POP AX        
+.EXIT

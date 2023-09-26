@@ -1,0 +1,8 @@
+--target=arm-arm-none-eabi -mcpu=cortex-m3 -masm=auto -c
+-gdwarf-4 -Wa,armasm,--pd,"__EVAL SETA 1"
+-I./RTE/Device/LPC1768
+-I./RTE/_Target_1
+-IC:/Users/bruno/AppData/Local/Arm/Packs/ARM/CMSIS/5.9.0/CMSIS/Core/Include
+-IC:/Users/bruno/AppData/Local/Arm/Packs/Keil/LPC1700_DFP/2.7.1/Device/Include
+-Wa,armasm,--pd,"__UVISION_VERSION SETA 537" -Wa,armasm,--pd,"_RTE_ SETA 1" -Wa,armasm,--pd,"LPC175x_6x SETA 1" -Wa,armasm,--pd,"_RTE_ SETA 1"
+-o ./objects/startup_lpc17xx.o "RTE/Device/LPC1768/startup_LPC17xx.s"

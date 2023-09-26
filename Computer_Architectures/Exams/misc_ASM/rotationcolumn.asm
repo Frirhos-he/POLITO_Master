@@ -1,0 +1,65 @@
+.MODEL .small
+.STACK
+.DATA
+
+SOURCE DB 'A','E','I','M','B','F','J','N','C','G','K','O','D','H','L','P'
+      
+.CODE
+.STARTUP
+
+
+
+input:
+XOR AX,AX
+MOV AH,1
+INT 21H  
+XOR DX,DX
+MOV DL,AL 
+SUB DL,'0'
+
+
+store:
+
+XOR SI,SI
+XOR DI,DI
+
+
+MOV AX,WORD PTR SOURCE[SI]
+ADD SI,2
+MOV BX,WORD PTR SOURCE[SI]
+PUSH BX ;memorized column
+PUSH AX 
+ADD SI,2
+
+               
+column:
+MOV AX,WORD PTR SOURCE[SI]
+MOV WORD PTR SOURCE[DI],AX
+ADD DI,2                  
+ADD SI,2
+MOV AX,WORD PTR SOURCE[SI]
+MOV WORD PTR SOURCE[DI],AX 
+ADD SI,2
+ADD DI,2
+CMP DI,12
+JE  throw
+JMP column
+
+throw:
+POP AX
+POP BX
+MOV WORD PTR SOURCE[DI],AX
+ADD DI,2
+MOV WORD PTR SOURCE[DI],BX
+
+DEC DX
+CMP DX,0
+JE exit
+JMP store
+
+exit:                
+
+
+
+.EXIT
+
