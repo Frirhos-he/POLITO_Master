@@ -1,0 +1,3 @@
+/export/home/stud/s309164/Desktop/lab02/cmake-build-debug/CMakeFiles/Desktop.dir
+/export/home/stud/s309164/Desktop/lab02/cmake-build-debug/CMakeFiles/edit_cache.dir
+/export/home/stud/s309164/Desktop/lab02/cmake-build-debug/CMakeFiles/rebuild_cache.dir

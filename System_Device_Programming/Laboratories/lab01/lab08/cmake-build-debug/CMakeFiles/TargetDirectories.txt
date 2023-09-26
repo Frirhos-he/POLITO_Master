@@ -1,0 +1,3 @@
+/cygdrive/c/Users/bruno/OneDrive/Desktop/SDA/Quer/lab/lab01/lab08/cmake-build-debug/CMakeFiles/lab08.dir
+/cygdrive/c/Users/bruno/OneDrive/Desktop/SDA/Quer/lab/lab01/lab08/cmake-build-debug/CMakeFiles/edit_cache.dir
+/cygdrive/c/Users/bruno/OneDrive/Desktop/SDA/Quer/lab/lab01/lab08/cmake-build-debug/CMakeFiles/rebuild_cache.dir
